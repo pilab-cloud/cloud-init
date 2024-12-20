@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.pilab.hu/cloud/cloud-init"
+	cloudinit "go.pilab.hu/cloud/cloud-init/v1"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
