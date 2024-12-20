@@ -1,4 +1,4 @@
-module go.pilab.hu/cloud/cloud-init/v1
+module go.pilab.hu/cloud/cloud-init
 
 go 1.23.3
 
