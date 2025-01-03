@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	cloudinit "go.pilab.hu/cloud/cloud-init/v1"
+	cloudinit "go.pilab.hu/cloud/cloud-init"
 )
 
 func TestCloudInitConfig_AddUser(t *testing.T) {

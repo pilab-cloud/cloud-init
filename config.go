@@ -3,13 +3,14 @@ package cloudinit
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/kdomanski/iso9660"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const VolumeName = "cidata"
@@ -28,6 +29,8 @@ type Config struct {
 	networkInterfaces map[string]Interface
 	users             []User
 	enableGuestAgent  bool
+	dataSourceType    string
+	ec2Meta           *EC2Metadata
 }
 
 func NewConfig() *Config {
@@ -42,6 +45,13 @@ func NewConfig() *Config {
 		networkInterfaces: make(map[string]Interface),
 		enableGuestAgent:  false,
 	}
+}
+
+func NewEC2Config() *Config {
+	c := NewConfig()
+	c.dataSourceType = "ec2"
+	c.ec2Meta = &EC2Metadata{}
+	return c
 }
 
 func (c *Config) SetStaticInterfaceAddress(mac, addr, gateway string, ns ...string) {
@@ -135,51 +145,95 @@ func (c *Config) GenerateConfigContent() []byte {
 
 // WriteISO writes the cloud-init configuration to an ISO image.
 func (c *Config) WriteISO(w io.Writer) error {
+	switch c.dataSourceType {
+	case "ec2":
+		return c.writeEC2ISO(w)
+	case "gce":
+		return c.writeGCEISO(w)
+	default:
+		return c.writeNoCloudISO(w)
+	}
+}
+
+func (c *Config) writeEC2ISO(w io.Writer) error {
 	writer, err := iso9660.NewWriter()
 	if err != nil {
-		return fmt.Errorf("failed to create writer: %w", err)
+		return fmt.Errorf("failed to create ISO writer: %w", err)
 	}
 	defer writer.Cleanup()
 
-	// TODO: create proper error handling
-	_ = writer.AddFile(bytes.NewReader(c.GenerateMetadataContent()), "meta-data")
-	_ = writer.AddFile(bytes.NewReader(c.GenerateConfigContent()), "user-data")
-
-	if len(c.networkInterfaces) > 0 {
-		_ = writer.AddFile(bytes.NewReader(c.GenerateNetworkConfigContent()), "network-config")
+	// EC2 expects metadata in JSON format
+	metadataJSON, err := json.Marshal(c.ec2Meta)
+	if err != nil {
+		return fmt.Errorf("failed to marshal EC2 metadata: %w", err)
 	}
 
-	err = writer.WriteTo(w, VolumeName)
-	if err != nil {
-		return fmt.Errorf("failed to write ISO image: %w", err)
+	// EC2 specific paths
+	if err := writer.AddFile(bytes.NewReader(metadataJSON), "ec2/latest/meta-data.json"); err != nil {
+		return fmt.Errorf("failed to add EC2 metadata: %w", err)
+	}
+
+	if err := writer.AddFile(bytes.NewReader(c.GenerateConfigContent()), "ec2/latest/user-data"); err != nil {
+		return fmt.Errorf("failed to add user-data: %w", err)
+	}
+
+	if len(c.networkInterfaces) > 0 {
+		networkData := c.generateEC2NetworkConfig()
+		if err := writer.AddFile(bytes.NewReader(networkData), "ec2/latest/network-data.json"); err != nil {
+			return fmt.Errorf("failed to add network-data: %w", err)
+		}
+	}
+
+	if err := writer.WriteTo(w, "ec2-seed"); err != nil {
+		return fmt.Errorf("failed to write EC2 ISO image: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Config) GenerateNetworkConfigContent() []byte {
-	ncf := new(NetworkConfigFile)
-
-	ncf.Network.Version = 1
-
-	i := 0
-	for k, v := range c.networkInterfaces {
-		ncf.Network.Config = append(ncf.Network.Config, NetworkConfig{
-			Type:       NetworkConfigTypePhysical,
-			Name:       fmt.Sprintf("interface%d", i),
-			MACAddress: k,
-			Subnets: []Subnet{{
-				Type:        SubnetTypeStatic,
-				Address:     v.Address,
-				Gateway:     v.Gateway,
-				Nameservers: v.Nameservers,
-				DNSSearch:   nil,
-			}},
-		})
-
-		i++
+func (c *Config) generateEC2NetworkConfig() []byte {
+	// Convert our network config to EC2 format
+	type ec2Network struct {
+		Interfaces []struct {
+			MACAddress string   `json:"mac"`
+			IPAddress  string   `json:"ip"`
+			Gateway    string   `json:"gateway"`
+			DNS        []string `json:"dns"`
+		} `json:"interfaces"`
 	}
 
-	out, _ := yaml.Marshal(ncf)
-	return out
+	net := ec2Network{
+		Interfaces: make([]struct {
+			MACAddress string   `json:"mac"`
+			IPAddress  string   `json:"ip"`
+			Gateway    string   `json:"gateway"`
+			DNS        []string `json:"dns"`
+		}, 0),
+	}
+
+	for mac, iface := range c.networkInterfaces {
+		net.Interfaces = append(net.Interfaces, struct {
+			MACAddress string   `json:"mac"`
+			IPAddress  string   `json:"ip"`
+			Gateway    string   `json:"gateway"`
+			DNS        []string `json:"dns"`
+		}{
+			MACAddress: mac,
+			IPAddress:  iface.Address,
+			Gateway:    iface.Gateway,
+			DNS:        iface.Nameservers,
+		})
+	}
+
+	data, _ := json.Marshal(net)
+	return data
+}
+
+func (c *Config) SetEC2Metadata(instanceID, az string, tags map[string]string) {
+	if c.ec2Meta == nil {
+		c.ec2Meta = &EC2Metadata{}
+	}
+	c.ec2Meta.InstanceID = instanceID
+	c.ec2Meta.AvailabilityZone = az
+	c.ec2Meta.Tags = tags
 }

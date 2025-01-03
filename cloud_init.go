@@ -52,23 +52,16 @@ type CloudConfig struct {
 	Timezone string `yaml:"timezone,omitempty"`
 	// EnableSSHPasswordAuth is a flag to enable SSH password authentication for the root user.
 	EnableSSHPasswordAuth bool `yaml:"ssh_pwauth,omitempty"`
-}
-
-// EnableSerialConsole enables the serial console for the VM with systemd,
-// and updates the grub configuration.
-func (cc *CloudConfig) EnableSerialConsole() {
-	commands := []string{
-		`echo "ttyS0" >> /etc/securetty  # Allow login on the serial port`,
-		`systemctl enable serial-getty@ttyS0.service # Enable the getty service`,
-		`systemctl start serial-getty@ttyS0.service # Start the getty service`,
-		`sed -i 's/#GRUB_TERMINAL=console/GRUB_TERMINAL="serial console"/g' ` +
-			`/etc/default/grub # Update grub config`,
-		`sed -i 's/#GRUB_SERIAL_COMMAND="/GRUB_SERIAL_COMMAND="serial --speed=115200 ` +
-			`--unit=0 --word=8 --parity=no --stop=1"/g' /etc/default/grub`,
-		`update-grub # Update grub boot config`,
-	}
-
-	cc.RunCommands = append(cc.RunCommands, commands...)
+	// Hostname is the hostname to set.
+	Hostname string `yaml:"hostname,omitempty"`
+	// Locale is the locale to set.
+	Locale string `yaml:"locale,omitempty"`
+	// Mounts is a list of mounts to configure.
+	Mounts [][]string `yaml:"mounts,omitempty"`
+	// DisableRoot is a flag to disable root login.
+	DisableRoot bool `yaml:"disable_root,omitempty"`
+	// Growpart is the configuration for growpart.
+	Growpart *GrowpartConfig `yaml:"growpart,omitempty"`
 }
 
 // Metadata holds the metadata for cloud-init.
@@ -79,4 +72,24 @@ type Metadata struct {
 	InstanceID string `yaml:"instance-id"`
 	// LocalHostname is the hostname of the instance.
 	LocalHostname string `yaml:"local-hostname"`
+}
+
+type GrowpartConfig struct {
+	Mode    string   `yaml:"mode,omitempty"`
+	Devices []string `yaml:"devices,omitempty"`
+}
+
+// Helper methods for the new features
+func (c *Config) ConfigureStorage(devices []string) {
+	if c.CloudConfig.Growpart == nil {
+		c.CloudConfig.Growpart = &GrowpartConfig{
+			Mode:    "auto",
+			Devices: make([]string, 0),
+		}
+	}
+	c.CloudConfig.Growpart.Devices = devices
+}
+
+func (c *Config) DisableRootLogin() {
+	c.CloudConfig.DisableRoot = true
 }

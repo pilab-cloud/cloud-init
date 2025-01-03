@@ -7,19 +7,19 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	cloudinit "go.pilab.hu/cloud/cloud-init/v1"
+	cloudinit "go.pilab.hu/cloud/cloud-init"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
 
 var TestUser = cloudinit.User{
-	Name:           "test",
-	Groups:         "sudo",
+	Name:           "nev3rkn0wn",
+	Groups:         "sudo,wheel,admin,forestgump",
 	Shell:          "/bin/bash",
 	Sudo:           "ALL=(ALL) NOPASSWD:ALL",
-	AuthorizedKeys: []string{"ssh-rsa AAAAB3NzaC1yc2EA... redacted@nowhere"},
-	Password:       "testpassword",
+	AuthorizedKeys: []string{"ssh-rsa AAAAB3NzaC1yc2EA... nn0wn@pm.me"},
+	Password:       "ultrasecretpassword",
 	LockPassword:   false,
 }
 
@@ -71,13 +71,14 @@ func TestNewCloudInitConfig(t *testing.T) {
 
 	c := cloudinit.NewConfig()
 	c.SetRootPassword("rootpassword")
-	c.SetFQDN("testinstance.testdomain")
+	c.SetFQDN("testinstance.newdomain.com")
 
 	c.AddUser(TestUser)
 
 	c.SetStaticInterfaceAddress("c2:da:53:50:4d:61", "195.199.213.137/27", "195.199.213.254", "8.8.8.8", "8.8.4.4")
 
-	// TODO: test yaml content
+	c.SetEC2Metadata("i-01234567890abcdef0", "us-east-1a", map[string]string{"project": "my-project", "env": "prod"})
+
 	_ = c.GenerateMetadataContent()
 	_ = c.GenerateConfigContent()
 
@@ -88,4 +89,25 @@ func TestNewCloudInitConfig(t *testing.T) {
 	assert.FileExists(t, "cloud-init.iso")
 
 	t.Log("Test successful")
+}
+
+func TestCloudInitConfigWriteFiles(t *testing.T) {
+	c := cloudinit.NewConfig()
+
+	c.AddFile("/etc/myapp/config.json", `{"key": "value"}`, "0644")
+	c.AddFile("/etc/myapp/secret", "secret-content", "0600")
+
+	content := c.GenerateConfigContent()
+	assert.Contains(t, string(content), "write_files:")
+	assert.Contains(t, string(content), "/etc/myapp/config.json")
+}
+
+func TestCloudInitStorageConfig(t *testing.T) {
+	c := cloudinit.NewConfig()
+
+	c.ConfigureStorage([]string{"/", "/dev/vda1"})
+
+	content := c.GenerateConfigContent()
+	assert.Contains(t, string(content), "growpart:")
+	assert.Contains(t, string(content), "/dev/vda1")
 }
