@@ -78,18 +78,3 @@ type GrowpartConfig struct {
 	Mode    string   `yaml:"mode,omitempty"`
 	Devices []string `yaml:"devices,omitempty"`
 }
-
-// Helper methods for the new features
-func (c *Config) ConfigureStorage(devices []string) {
-	if c.CloudConfig.Growpart == nil {
-		c.CloudConfig.Growpart = &GrowpartConfig{
-			Mode:    "auto",
-			Devices: make([]string, 0),
-		}
-	}
-	c.CloudConfig.Growpart.Devices = devices
-}
-
-func (c *Config) DisableRootLogin() {
-	c.CloudConfig.DisableRoot = true
-}

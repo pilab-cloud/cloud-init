@@ -33,10 +33,3 @@ type EC2Config struct {
 	*Config
 	metadata EC2Metadata
 }
-
-// NewEC2Config creates a new EC2-specific configuration
-func NewEC2Config() *Config {
-	c := NewConfig()
-	c.dataSourceType = string(DataSourceEC2)
-	return c
-}

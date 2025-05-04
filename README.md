@@ -3,7 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/go.pilab.hu/cloud/cloud-init)](https://goreportcard.com/report/go.pilab.hu/cloud/cloud-init)
 [![GoDoc](https://godoc.org/go.pilab.hu/cloud/cloud-init?status.svg)](https://godoc.org/go.pilab.hu/cloud/cloud-init)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/pilab-hu/cloud-init)](https://go.dev/)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/pilab-cloud/cloud-init)](https://go.dev/)
 
 Cloud-Init utilities to create cloud-init ISO to configure cloud images.
 

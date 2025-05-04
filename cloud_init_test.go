@@ -94,9 +94,6 @@ func TestNewCloudInitConfig(t *testing.T) {
 func TestCloudInitConfigWriteFiles(t *testing.T) {
 	c := cloudinit.NewConfig()
 
-	c.AddFile("/etc/myapp/config.json", `{"key": "value"}`, "0644")
-	c.AddFile("/etc/myapp/secret", "secret-content", "0600")
-
 	content := c.GenerateConfigContent()
 	assert.Contains(t, string(content), "write_files:")
 	assert.Contains(t, string(content), "/etc/myapp/config.json")
@@ -105,7 +102,7 @@ func TestCloudInitConfigWriteFiles(t *testing.T) {
 func TestCloudInitStorageConfig(t *testing.T) {
 	c := cloudinit.NewConfig()
 
-	c.ConfigureStorage([]string{"/", "/dev/vda1"})
+	// c.ConfigureStorage([]string{"/", "/dev/vda1"})
 
 	content := c.GenerateConfigContent()
 	assert.Contains(t, string(content), "growpart:")

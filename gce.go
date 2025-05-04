@@ -89,12 +89,6 @@ type GCEAccessConfig struct {
 	Name string `json:"name"`
 }
 
-// Add to Config struct
-type Config struct {
-	// ... existing fields ...
-	gceMetadata *GCEMetadata
-}
-
 // New constructor for GCE
 func NewGCEConfig() *Config {
 	c := NewConfig()

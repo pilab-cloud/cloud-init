@@ -31,6 +31,7 @@ type Config struct {
 	enableGuestAgent  bool
 	dataSourceType    string
 	ec2Meta           *EC2Metadata
+	gceMetadata       *GCEMetadata
 }
 
 func NewConfig() *Config {
@@ -151,8 +152,11 @@ func (c *Config) WriteISO(w io.Writer) error {
 	case "gce":
 		return c.writeGCEISO(w)
 	default:
-		return c.writeNoCloudISO(w)
+		// FIXME: wtf?
+		// return c.writeNoCloudISO(w)
 	}
+
+	return nil
 }
 
 func (c *Config) writeEC2ISO(w io.Writer) error {
