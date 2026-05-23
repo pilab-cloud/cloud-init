@@ -152,11 +152,8 @@ func (c *Config) WriteISO(w io.Writer) error {
 	case "gce":
 		return c.writeGCEISO(w)
 	default:
-		// FIXME: wtf?
-		// return c.writeNoCloudISO(w)
+		return c.writeNoCloudISO(w)
 	}
-
-	return nil
 }
 
 func (c *Config) writeEC2ISO(w io.Writer) error {
