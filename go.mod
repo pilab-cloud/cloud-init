@@ -1,11 +1,11 @@
 module go.pilab.hu/cloud/cloud-init
 
-go 1.23.3
+go 1.25.0
 
 require (
 	github.com/kdomanski/iso9660 v0.4.0
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.35.0
+	golang.org/x/crypto v0.52.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
